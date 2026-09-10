@@ -41,8 +41,10 @@ npm run dev
 
 ## Running without an API key
 
-If `ANTHROPIC_API_KEY` is not set in `.env`, the app automatically falls back to a
-deterministic regex-based mock parser (`src/ai/mockProvider.ts`) instead of calling Claude.
+If neither `GEMINI_API_KEY` nor `ANTHROPIC_API_KEY` is set in `.env`, the app automatically
+falls back to a deterministic regex-based mock parser (`src/ai/mockProvider.ts`) instead of
+calling an AI provider. `GEMINI_API_KEY` is checked first (Google AI Studio has a free tier
+with no upfront payment — see `docs/cost.md`); `ANTHROPIC_API_KEY` also works if set instead.
 This lets the full flow (upload -> extract -> structure -> match -> diff -> report) run and
 be demoed end-to-end, but the mock only understands this project's own fixed PDF table
 layout — it is **not** a substitute for the AI step on arbitrary real-world offer PDFs. A
@@ -81,9 +83,10 @@ src/
   pdf/extractText.ts       deterministic per-page PDF text extraction (pdfjs-dist)
   pdf/renderOffer.ts        fixture PDF generator (used by scripts/generateFixtures.ts)
   ai/provider.ts             StructuringProvider interface
+  ai/geminiProvider.ts       real implementation (Google Gemini, structured JSON output)
   ai/claudeProvider.ts       real implementation (Anthropic Claude, tool-use/JSON schema)
   ai/mockProvider.ts         regex fallback used when no API key is configured
-  ai/selectProvider.ts       picks Claude vs mock based on ANTHROPIC_API_KEY
+  ai/selectProvider.ts       picks Gemini, else Claude, else mock, based on env vars
   matching/matchItems.ts     order-independent, rename-tolerant line-item matching
   diff/computeDiff.ts        deterministic diff + arithmetic recalculation
   pipeline.ts                orchestrates the above, with timing
@@ -104,7 +107,7 @@ layout.
 ## Reused vs. own work
 
 - **Reused (third-party libraries):** `express`, `multer`, `pdfjs-dist`, `pdfkit`,
-  `@anthropic-ai/sdk`, `dotenv`, `tsx`, `typescript`, `playwright` (dev-only, for the
-  browser-check script) — all off-the-shelf, unmodified, standard usage.
+  `@google/genai`, `@anthropic-ai/sdk`, `dotenv`, `tsx`, `typescript`, `playwright`
+  (dev-only, for the browser-check script) — all off-the-shelf, unmodified, standard usage.
 - **Own work:** all files under `src/`, `scripts/`, `tests/`, `public/`, and `docs/` were
   written for this assignment; no pre-existing finished product was adapted.

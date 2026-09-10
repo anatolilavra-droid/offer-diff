@@ -6,27 +6,51 @@ backed by a real, measured run are explicitly marked `Not measured yet`.
 
 ## 3.1 Pricing assumptions (AI API)
 
-- **Provider:** Anthropic (Claude API)
-- **Model configured:** `claude-sonnet-5` (see `.env.example` / `ANTHROPIC_MODEL`)
-- **Pricing unit:** USD per 1,000,000 tokens, separate input and output rates
-- **Price used:** **not verified from the primary source.** Direct fetches to
-  `anthropic.com` and `docs.anthropic.com` are blocked by this sandbox's network egress
-  policy. A web search performed on **2026-09-10** returned third-party aggregator pages
-  (not Anthropic itself) reporting Sonnet-tier API pricing historically around **$3.00 /
-  $15.00 per million tokens (input/output)** — e.g. cloudzero.com/blog/claude-pricing,
-  finout.io/blog/anthropic-api-pricing (accessed 2026-09-10). These are **secondary
-  sources and are not treated as confirmed** for `claude-sonnet-5` specifically.
-  **Action needed:** confirm the exact current price for the configured model at
-  `console.anthropic.com → Settings → Billing` (or `anthropic.com/pricing`) once a key
-  exists, and update this line with the confirmed number, source, and date.
+Two providers are implemented behind the same `StructuringProvider` interface
+(`src/ai/selectProvider.ts` picks whichever API key is set, Gemini first). Both are
+documented since either may end up being the one actually used for measurement.
+
+### Google Gemini (planned primary path — Google AI Studio has a genuinely free tier)
+
+- **Provider:** Google (Gemini API via Google AI Studio)
+- **Model configured:** `gemini-2.5-flash` (see `.env.example` / `GEMINI_MODEL`)
+- **Pricing unit:** USD per 1,000,000 tokens, separate input/output rates
+- **Price used:** **not verified from the primary source** — direct fetches to
+  `ai.google.dev` are blocked by this sandbox's network egress policy. Third-party
+  aggregator pages (accessed via web search, **2026-09-10**, not Google itself) report
+  Gemini 2.5 Flash at roughly **$0.30 / $2.50 per million tokens (input/output)**. Not
+  treated as confirmed.
+  **Action needed:** confirm the exact current price at `ai.google.dev/gemini-api/docs/pricing`
+  once a key exists.
+- **Free tier (documented, per CLAUDE.md's "free credits are not zero operating cost" rule):**
+  third-party sources report Google AI Studio's free tier as no card required, does not
+  expire, roughly 15 requests/minute and 1,500 requests/day for Flash models (limits vary
+  by account/region and are not guaranteed). **Non-monetary cost:** those same sources
+  report that free-tier prompts may be used by Google to improve their products (unlike the
+  paid tier / Vertex AI) — for this project the submitted content is fictional test-fixture
+  text, so that specific tradeoff is low-stakes here, but it is a real cost to record, not
+  "free."
 - **Formula:** `cost_per_call = (input_tokens / 1,000,000 × input_price) + (output_tokens / 1,000,000 × output_price)`
 - **Usage assumptions:** one `structureOffer()` call per document, i.e. **2 calls per
-  comparison** (original + revised). Token counts are read directly from the Anthropic API
-  response's `usage` field (see `src/ai/claudeProvider.ts`) — not estimated from text
-  length — once real calls are made.
-- **Retries:** not yet observed (no real API calls made). The client does not currently
-  implement automatic retries; if added, each retry's tokens must be added to the formula
-  above, per the brief's requirement to include retries in the cost estimate.
+  comparison**. Token counts read from `response.usageMetadata.{promptTokenCount,
+  candidatesTokenCount}` (see `src/ai/geminiProvider.ts`) — not estimated from text length.
+
+### Anthropic Claude (alternative — paid, still supported by the same interface)
+
+- **Provider:** Anthropic (Claude API)
+- **Model configured:** `claude-sonnet-5` (see `.env.example` / `ANTHROPIC_MODEL`)
+- **Price used:** **not verified from the primary source** (`anthropic.com` /
+  `docs.anthropic.com` blocked in this sandbox). Third-party sources report Sonnet-tier
+  pricing historically around **$3.00 / $15.00 per million tokens (input/output)**
+  (accessed 2026-09-10). Not treated as confirmed.
+- **Formula:** same as above. Token counts read from the Anthropic response's `usage` field
+  (see `src/ai/claudeProvider.ts`).
+
+### Both providers
+
+- **Retries:** not yet observed (no real API calls made with either provider). Neither
+  client currently implements automatic retries; if added, each retry's tokens must be
+  added to the formula above, per the brief's requirement.
 - **Paid intermediaries:** none used. PDF text extraction (`pdfjs-dist`) and matching/diff
   are local, deterministic code with no external paid API calls.
 
@@ -56,7 +80,7 @@ free-trial). If a free-trial credit balance is used later:
 ## 3.4 Measured cost
 
 ```
-Measurement period: not started — no funded/available ANTHROPIC_API_KEY yet
+Measurement period: not started — no GEMINI_API_KEY or ANTHROPIC_API_KEY configured yet
 Number of runs: 0 real AI calls (10 deterministic-only runs recorded, see docs/measurements.md)
 Input: test-set/input/normal/{original,revised}.pdf
 Usage: Not measured yet (mock provider reports inputTokens=0, outputTokens=0 by construction —
@@ -67,7 +91,8 @@ Calculated cost: Not measured yet
 Hosting cost: $0 (not deployed — see 3.2)
 Other costs: none observed
 Limitations: the entire AI-step cost is unmeasured. Re-run scripts/measure.ts after setting
-             ANTHROPIC_API_KEY in .env; selectStructuringProvider() will automatically switch
-             to ClaudeStructuringProvider and report real input/output token counts per call,
-             which combined with a confirmed price (3.1) gives a real calculated cost.
+             GEMINI_API_KEY (or ANTHROPIC_API_KEY) in .env; selectStructuringProvider() will
+             automatically switch to the real provider and report real input/output token
+             counts per call, which combined with a confirmed price (3.1) gives a real
+             calculated cost.
 ```
