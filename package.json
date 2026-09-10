@@ -1,0 +1,34 @@
+{
+  "name": "offer-diff",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Compares an original and a revised commercial offer (PDF) and reports substantive changes.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "fixtures:generate": "tsx scripts/generateFixtures.ts",
+    "measure": "tsx scripts/measure.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.32.1",
+    "dotenv": "16.4.5",
+    "express": "5.2.1",
+    "multer": "2.3.0",
+    "pdfjs-dist": "4.9.155",
+    "pdfkit": "0.15.1"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/multer": "1.4.12",
+    "@types/node": "22.9.0",
+    "@types/pdfkit": "0.13.4",
+    "tsx": "4.23.13",
+    "typescript": "5.6.3"
+  }
+}
