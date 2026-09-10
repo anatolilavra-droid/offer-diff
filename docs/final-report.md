@@ -265,6 +265,8 @@ reports 0 vulnerabilities as of this submission.
 | Free credits != zero cost, documented | Verified — and now applicable: Gemini free-tier rate limit (5 req/min/model) and data-use terms documented in docs/cost.md §3.1 |
 | Working browser demo | Verified (local; see README) |
 | Repository with setup instructions | Verified |
-| Video walkthrough (<=3 min) | Not verified (not yet recorded — outside this session's scope) |
-| Reused vs. own components identified | Verified (README) |
-| Time spent | See delivery notes (to be filled in by the user for the actual submission) |
+| Video walkthrough (<=3 min) | Partially verified — `docs/demo-video.webm` recorded (19.8s, silent, automated Playwright capture of all 4 scenarios); not a narrated candidate presentation |
+| Reused vs. own components identified | Verified (README, DELIVERY_NOTES.md) |
+| Time spent | Verified — ~1h15m of implementation measured from git commit timestamps (DELIVERY_NOTES.md); pre-commit clarification time real but not separately logged |
+| Screenshots + architecture diagram | Verified (README: 6 real screenshots, Mermaid flow diagram) |
+| Delivery notes (inputs, failures, time, AI tools, verification example) | Verified (`DELIVERY_NOTES.md`) |
