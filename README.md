@@ -4,7 +4,41 @@ Compares an original and a revised commercial offer (PDF) and reports substantiv
 scope, quantities, unit prices, totals, and delivery dates — each with a reference back to
 both source documents. Built for a supplied technical test assignment (see `TASK.md`).
 
+**Links:** Repository — https://github.com/anatolilavra-droid/offer-diff · Live demo — see
+"Demo" below (runs locally; no public URL deployed, see rationale) · Video walkthrough —
+`docs/demo-video.webm` (see "Video walkthrough" below) · Delivery notes — **`DELIVERY_NOTES.md`**.
+
 Full evaluation report (evidence, measurements, cost, tradeoffs, limitations): **`docs/final-report.md`**.
+
+## Screenshots
+
+All screenshots below were captured from the actual running app in a real browser
+(`scripts/captureScreenshots.ts`, Playwright/Chromium) — not mockups. Unless noted, results
+came from the real Gemini API (`gemini-2.5-flash`).
+
+| | |
+|---|---|
+| **Upload form** | ![empty form](docs/screenshots/00-empty-form.png) |
+| **Normal changes** (qty/price/removal/date, real Gemini) | ![normal](docs/screenshots/01-normal.png) |
+| **Rename + reorder + wrong total** (real Gemini — uncertain match + arithmetic discrepancy) | ![ambiguity](docs/screenshots/02-ambiguity-reorder-badtotal.png) |
+| **Currency mismatch → decline** (mock parser — real key hit its daily quota while capturing this one; the decline logic itself was already verified with real Gemini output earlier, see `docs/test-report.md`) | ![decline](docs/screenshots/03-decline-currency-mismatch-mock.png) |
+| **Formatting-only → 0 changes** (real Gemini) | ![formatting-only](docs/screenshots/04-formatting-only.png) |
+| **A real failure encountered live**: Google AI Studio's free-tier daily quota (20 requests/day/model) exhausted mid-session — the raw upstream error is surfaced to the user rather than hidden or crashing | ![quota exhausted](docs/screenshots/05-real-daily-quota-exhausted.png) |
+
+## Flow diagram
+
+```mermaid
+flowchart TD
+    U["Browser: user uploads<br/>original.pdf + revised.pdf"] --> A["POST /api/compare<br/>(src/server.ts)"]
+    A --> B["extractText()<br/>deterministic, per-page,<br/>no OCR (pdfjs-dist)"]
+    B --> C["StructuringProvider.structureOffer()<br/>Gemini (real) / Claude (real) / regex mock (fallback)"]
+    C --> D["matchItems()<br/>order-independent, rename-tolerant<br/>(token-Jaccard similarity)"]
+    D --> E["computeDiff()<br/>deterministic: currency check,<br/>qty/price/date diff, total recompute"]
+    E -->|"currency mismatch or over limits"| F["Decline banner"]
+    E -->|"otherwise"| G["Substantive changes +<br/>arithmetic discrepancies +<br/>uncertain matches"]
+    G --> H["public/app.js renders report<br/>with source references"]
+    F --> H
+```
 
 ## Scope
 
@@ -21,15 +55,16 @@ Full evaluation report (evidence, measurements, cost, tradeoffs, limitations): *
 ## Requirements
 
 - Node.js >= 22 (tested on v22.22.2)
-- An Anthropic API key for the real AI structuring step (optional — see "Running without an
-  API key" below)
+- A Google AI Studio API key (free tier, no card required — https://aistudio.google.com/apikey)
+  or an Anthropic API key, for the real AI structuring step (optional — see "Running without
+  an API key" below)
 
 ## Setup
 
 ```bash
 npm install
 cp .env.example .env
-# edit .env and set ANTHROPIC_API_KEY if you have one (see below if you don't)
+# edit .env and set GEMINI_API_KEY (free tier) or ANTHROPIC_API_KEY if you have one
 ```
 
 ## Run
@@ -38,6 +73,17 @@ cp .env.example .env
 npm run dev
 # open http://localhost:3000 in a browser
 ```
+
+## Demo
+
+This submission's working demo is **local**: `npm run dev` + a browser at
+`http://localhost:3000`, per the brief's explicit allowance that "no accounts, payments...
+required" — no public hosting has been provisioned or billed (see `docs/cost.md` §3.2 for
+why: naming a hosting provider/price without actually using it would be an unverified
+promise). If a publicly reachable URL is specifically required for evaluation, the app is a
+single stateless Node/Express process with no database, so it is straightforward to deploy
+to any standard Node host (Render, Fly.io, Railway, etc.) — say which platform and it can be
+set up.
 
 ## Running without an API key
 
@@ -97,12 +143,21 @@ tests/                       unit tests (matching + diff engine)
 docs/                        final report, cost, measurements, test report
 ```
 
+## Video walkthrough
+
+`docs/demo-video.webm` — a short, silent screen recording (Playwright-driven, real browser,
+real Gemini API) showing the actual upload → compare → report flow for two scenarios. This
+is an automated functional walkthrough proving the flow works, not a narrated presentation
+of the author's own reasoning/tradeoffs — see `DELIVERY_NOTES.md` for that.
+
 ## Known limitations
 
-See `docs/final-report.md` ("Known limitations" and "Next improvements") for the full list,
-notably: the AI step has not been exercised with real API calls yet (no funded key at the
-time of this submission), and the mock fallback only handles this project's own fixed PDF
-layout.
+See `docs/final-report.md` ("Known limitations" and "Next improvements") for the full list.
+Highlights: Google AI Studio's free tier caps usage at 5 requests/minute and **20
+requests/day** per model (confirmed from real `429` errors during testing — see
+`docs/screenshots/05-real-daily-quota-exhausted.png`); Claude is implemented behind the same
+interface but has not been exercised with real traffic; the regex mock fallback only handles
+this project's own fixed PDF layout.
 
 ## Reused vs. own work
 

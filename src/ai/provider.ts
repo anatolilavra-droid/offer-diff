@@ -5,6 +5,8 @@ export interface StructuringUsage {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /** Number of retried attempts before this call succeeded (0 = succeeded first try). */
+  retries: number;
 }
 
 export interface StructuringResult {

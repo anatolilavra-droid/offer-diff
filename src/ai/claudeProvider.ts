@@ -98,6 +98,7 @@ export class ClaudeStructuringProvider implements StructuringProvider {
         model: this.model,
         inputTokens: message.usage.input_tokens,
         outputTokens: message.usage.output_tokens,
+        retries: 0,
       },
     };
   }

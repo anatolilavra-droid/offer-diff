@@ -23,17 +23,25 @@ documented since either may end up being the one actually used for measurement.
   **Action needed:** confirm the exact current price at `ai.google.dev/gemini-api/docs/pricing`
   once a key exists.
 - **Free tier (documented, per CLAUDE.md's "free credits are not zero operating cost" rule):**
-  no card required. **Rate limit — confirmed from the primary source, not a third-party
-  estimate:** this project's actual key returned `429 RESOURCE_EXHAUSTED` with
-  `quotaId: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"`, `quotaValue: "5"` for
-  `gemini-2.5-flash` after 6 real requests in quick succession on 2026-09-10 (see
-  `docs/test-report.md` and `docs/measurements.md`). That is **5 requests/minute per model
-  for this project** — lower than the ~15/minute figure reported by third-party aggregator
-  blogs before a key was available, confirming those blogs' own caveat that limits vary by
-  account. **Non-monetary cost:** third-party sources (unverified) report that free-tier
-  prompts may be used by Google to improve their products (unlike the paid tier / Vertex
-  AI) — for this project the submitted content is fictional test-fixture text, so that
-  specific tradeoff is low-stakes here, but it is a real cost to record, not "free."
+  no card required. **Two separate rate limits — both confirmed from the primary source
+  (the API's own error responses), not third-party estimates:**
+  - **Per-minute:** `429 RESOURCE_EXHAUSTED`, `quotaId:
+    "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"`, `quotaValue: "5"` — hit after 6
+    real requests in quick succession on 2026-09-10.
+  - **Per-day:** `429 RESOURCE_EXHAUSTED`, `quotaId:
+    "GenerateRequestsPerDayPerProjectPerModel-FreeTier"`, `quotaValue: "20"` — hit later the
+    same day after ~20+ cumulative real requests across testing, screenshot capture, and
+    retry attempts (see `docs/screenshots/05-real-daily-quota-exhausted.png` for the actual
+    error as it appeared in the running app). **This means a fresh free-tier key supports
+    roughly 10 real comparisons per day** for `gemini-2.5-flash` (2 calls/comparison), not
+    an unlimited amount — a material constraint for anyone reproducing this project's
+    measurements on the same day.
+  Both figures are lower than the ~15/minute third-party estimate quoted before a key was
+  available, confirming those blogs' own caveat that limits vary by account/project.
+  **Non-monetary cost:** third-party sources (unverified) report that free-tier prompts may
+  be used by Google to improve their products (unlike the paid tier / Vertex AI) — for this
+  project the submitted content is fictional test-fixture text, so that specific tradeoff is
+  low-stakes here, but it is a real cost to record, not "free."
 - **Formula:** `cost_per_call = (input_tokens / 1,000,000 × input_price) + (output_tokens / 1,000,000 × output_price)`
 - **Usage assumptions:** one `structureOffer()` call per document, i.e. **2 calls per
   comparison**. Token counts read from `response.usageMetadata.{promptTokenCount,
@@ -52,12 +60,15 @@ documented since either may end up being the one actually used for measurement.
 
 ### Both providers
 
-- **Retries:** Gemini has now been called for real (see §3.4); one request was rejected by a
-  free-tier rate limit (429) and manually retried after the quota window reset — that
-  rejected request consumed 0 tokens (rejected before generation), so it added 0 cost but did
-  add latency (waiting for the quota to reset). Neither client implements *automatic* retry
-  logic yet; if added, each retry's tokens must be added to the formula above. Claude has not
-  been called for real in this project.
+- **Retries:** `GeminiStructuringProvider` now implements automatic retry with exponential
+  backoff (3s, 6s, up to 3 attempts total) on `429` and `503` responses
+  (`src/ai/geminiProvider.ts`) — added after real testing hit both a per-minute rate limit
+  (429) and a real transient `503 UNAVAILABLE` ("model currently experiencing high demand")
+  from Gemini itself while capturing evidence screenshots. Each retried attempt's usage is
+  tracked in `StructuringUsage.retries` (a rejected 429/503 attempt consumes 0 tokens — it's
+  rejected before generation — so retries add latency, not direct token cost, unless a retry
+  itself eventually succeeds and is billed normally). Claude has no retry logic and has not
+  been called with real traffic in this project.
 - **Paid intermediaries:** none used. PDF text extraction (`pdfjs-dist`) and matching/diff
   are local, deterministic code with no external paid API calls.
 

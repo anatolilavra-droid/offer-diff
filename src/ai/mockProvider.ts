@@ -101,7 +101,7 @@ export class MockRegexStructuringProvider implements StructuringProvider {
 
     return {
       offer,
-      usage: { provider: "mock", model: "regex-mock-v1", inputTokens: 0, outputTokens: 0 },
+      usage: { provider: "mock", model: "regex-mock-v1", inputTokens: 0, outputTokens: 0, retries: 0 },
     };
   }
 }

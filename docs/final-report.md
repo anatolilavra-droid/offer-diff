@@ -57,6 +57,15 @@ mock fallback — see below).
 - **formatting-only** (case, date format, thousands separators changed, nothing else): 0
   substantive changes reported, as required by the brief.
 
+**Unplanned difficult input, encountered for real while capturing evidence screenshots:**
+Gemini itself returned a genuine transient `503 UNAVAILABLE` ("model currently experiencing
+high demand") on two calls, and the free tier's rate limits (5/min, 20/day — see
+`docs/cost.md`) were hit for real during testing. The app surfaced both as visible errors
+instead of crashing or hanging (see `docs/screenshots/05-real-daily-quota-exhausted.png`),
+and retry-with-backoff was added directly in response to the 503s actually observed — not
+speculatively. This is real evidence of "difficult input" handling that no synthetic fixture
+would have produced.
+
 ## Evidence
 
 Every implementation step in this session was verified with an actual command and actual
@@ -188,11 +197,17 @@ reports 0 vulnerabilities as of this submission.
 
 - **Claude has not been exercised with real API calls** (only Gemini has, so far) —
   `ClaudeStructuringProvider` is implemented and type-checked but unverified at runtime.
-- **The Gemini measurements are a small sample (n=4)**, limited by the free tier's 5
-  requests/minute/model rate limit — not a large-scale accuracy or latency study.
-- **No automatic retry/backoff on rate limits.** The one 429 encountered during measurement
-  was retried manually after waiting; a production version would need exponential backoff
-  or a paid tier with a higher limit to handle real concurrent usage.
+- **The Gemini measurements are a small sample (n=4)**, limited by the free tier's rate
+  limits — not a large-scale accuracy or latency study.
+- **Free tier has two confirmed hard caps**, both discovered from real API errors while
+  building this project: **5 requests/minute/model** and **20 requests/day/model** (see
+  `docs/cost.md` §3.1 and `docs/screenshots/05-real-daily-quota-exhausted.png`). A fresh
+  free key supports roughly 10 real comparisons/day — a real constraint for reproducing
+  this project's measurements same-day, and for any real usage beyond a demo.
+- **Retry/backoff is now implemented** (`src/ai/geminiProvider.ts`: 3 attempts, exponential
+  backoff on 429/503) after real testing hit both a rate limit and a genuine transient `503`
+  from Gemini ("model currently experiencing high demand"). It has not been tested against
+  a paid tier's higher limits, only the free tier's.
 - The regex mock (used only when no API key is configured) only understands this project's
   own fixed table layout; it will silently under-extract or fail on real-world offer PDFs
   with different formatting.
@@ -212,9 +227,10 @@ reports 0 vulnerabilities as of this submission.
    accessible from this sandbox) to convert the already-real token measurements into a
    fully confirmed dollar figure — low effort, directly improves the one remaining
    "unverified" number in the cost report.
-2. **Add retry/backoff for rate limits** — needed for any real multi-user usage beyond the
-   free tier's 5 req/min; not built yet because the single manual retry during measurement
-   was sufficient to demonstrate the flow.
+2. **Upgrade to a paid tier or add request queuing** — the free tier's 5/min and 20/day caps
+   are workable for a demo but not for real multi-user usage; the retry/backoff already
+   built handles transient failures but cannot work around a hard daily cap. Not done now
+   because the demo's actual usage stayed within the free tier's limits.
 3. **Broaden date-format parsing** — cover more real-world formats (DD/MM/YYYY, "15 Dec
    2024", etc.) — medium value, low effort, not done now because the test set didn't need it.
 4. **Deploy for a public demo URL**, once real hosting is actually chosen and billed (see

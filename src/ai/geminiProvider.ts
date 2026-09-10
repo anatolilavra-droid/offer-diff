@@ -1,6 +1,14 @@
-import { GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI } from "@google/genai";
 import type { PageInput, StructuringProvider, StructuringResult } from "./provider";
 import type { StructuredOffer } from "../types";
+
+const RETRYABLE_STATUSES = new Set([429, 503]);
+const MAX_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 3000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const fieldRefSchema = {
   type: "object",
@@ -60,38 +68,58 @@ export class GeminiStructuringProvider implements StructuringProvider {
 
   async structureOffer(pages: PageInput[]): Promise<StructuringResult> {
     const pageBlocks = pages.map((p) => `--- page ${p.pageNumber} ---\n${p.text}`).join("\n\n");
+    const contents =
+      `Below is text extracted from a commercial offer PDF, page by page. ` +
+      `Extract its structured contents as JSON matching the provided schema. ` +
+      `Transcribe values exactly as printed: do not normalize dates, do not fix arithmetic, ` +
+      `do not invent values that are not present in the text. ` +
+      `For every field that has a "ref", set "page" to the page number it appears on and ` +
+      `"snippet" to the exact source line it came from.\n\n${pageBlocks}`;
 
-    const response = await this.client.models.generateContent({
-      model: this.model,
-      contents:
-        `Below is text extracted from a commercial offer PDF, page by page. ` +
-        `Extract its structured contents as JSON matching the provided schema. ` +
-        `Transcribe values exactly as printed: do not normalize dates, do not fix arithmetic, ` +
-        `do not invent values that are not present in the text. ` +
-        `For every field that has a "ref", set "page" to the page number it appears on and ` +
-        `"snippet" to the exact source line it came from.\n\n${pageBlocks}`,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema,
-      },
-    });
+    let retries = 0;
+    let lastError: unknown;
 
-    const text = response.text;
-    if (!text) {
-      throw new Error("Gemini response did not contain any text output");
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const response = await this.client.models.generateContent({
+          model: this.model,
+          contents,
+          config: { responseMimeType: "application/json", responseJsonSchema },
+        });
+
+        const text = response.text;
+        if (!text) {
+          throw new Error("Gemini response did not contain any text output");
+        }
+
+        const offer = JSON.parse(text) as StructuredOffer;
+        const usage = response.usageMetadata;
+
+        return {
+          offer,
+          usage: {
+            provider: "google",
+            model: this.model,
+            inputTokens: usage?.promptTokenCount ?? 0,
+            outputTokens: usage?.candidatesTokenCount ?? 0,
+            retries,
+          },
+        };
+      } catch (err) {
+        lastError = err;
+        const status = err instanceof ApiError ? err.status : undefined;
+        const canRetry = status !== undefined && RETRYABLE_STATUSES.has(status) && attempt < MAX_ATTEMPTS;
+        if (!canRetry) throw err;
+
+        retries++;
+        const backoff = BASE_BACKOFF_MS * 2 ** (attempt - 1);
+        console.warn(
+          `[offer-diff] Gemini call failed with status ${status} (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${backoff}ms`
+        );
+        await sleep(backoff);
+      }
     }
 
-    const offer = JSON.parse(text) as StructuredOffer;
-    const usage = response.usageMetadata;
-
-    return {
-      offer,
-      usage: {
-        provider: "google",
-        model: this.model,
-        inputTokens: usage?.promptTokenCount ?? 0,
-        outputTokens: usage?.candidatesTokenCount ?? 0,
-      },
-    };
+    throw lastError;
   }
 }
