@@ -23,13 +23,17 @@ documented since either may end up being the one actually used for measurement.
   **Action needed:** confirm the exact current price at `ai.google.dev/gemini-api/docs/pricing`
   once a key exists.
 - **Free tier (documented, per CLAUDE.md's "free credits are not zero operating cost" rule):**
-  third-party sources report Google AI Studio's free tier as no card required, does not
-  expire, roughly 15 requests/minute and 1,500 requests/day for Flash models (limits vary
-  by account/region and are not guaranteed). **Non-monetary cost:** those same sources
-  report that free-tier prompts may be used by Google to improve their products (unlike the
-  paid tier / Vertex AI) — for this project the submitted content is fictional test-fixture
-  text, so that specific tradeoff is low-stakes here, but it is a real cost to record, not
-  "free."
+  no card required. **Rate limit — confirmed from the primary source, not a third-party
+  estimate:** this project's actual key returned `429 RESOURCE_EXHAUSTED` with
+  `quotaId: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"`, `quotaValue: "5"` for
+  `gemini-2.5-flash` after 6 real requests in quick succession on 2026-09-10 (see
+  `docs/test-report.md` and `docs/measurements.md`). That is **5 requests/minute per model
+  for this project** — lower than the ~15/minute figure reported by third-party aggregator
+  blogs before a key was available, confirming those blogs' own caveat that limits vary by
+  account. **Non-monetary cost:** third-party sources (unverified) report that free-tier
+  prompts may be used by Google to improve their products (unlike the paid tier / Vertex
+  AI) — for this project the submitted content is fictional test-fixture text, so that
+  specific tradeoff is low-stakes here, but it is a real cost to record, not "free."
 - **Formula:** `cost_per_call = (input_tokens / 1,000,000 × input_price) + (output_tokens / 1,000,000 × output_price)`
 - **Usage assumptions:** one `structureOffer()` call per document, i.e. **2 calls per
   comparison**. Token counts read from `response.usageMetadata.{promptTokenCount,
@@ -48,9 +52,12 @@ documented since either may end up being the one actually used for measurement.
 
 ### Both providers
 
-- **Retries:** not yet observed (no real API calls made with either provider). Neither
-  client currently implements automatic retries; if added, each retry's tokens must be
-  added to the formula above, per the brief's requirement.
+- **Retries:** Gemini has now been called for real (see §3.4); one request was rejected by a
+  free-tier rate limit (429) and manually retried after the quota window reset — that
+  rejected request consumed 0 tokens (rejected before generation), so it added 0 cost but did
+  add latency (waiting for the quota to reset). Neither client implements *automatic* retry
+  logic yet; if added, each retry's tokens must be added to the formula above. Claude has not
+  been called for real in this project.
 - **Paid intermediaries:** none used. PDF text extraction (`pdfjs-dist`) and matching/diff
   are local, deterministic code with no external paid API calls.
 
@@ -79,20 +86,39 @@ free-trial). If a free-trial credit balance is used later:
 
 ## 3.4 Measured cost
 
+A funded (free-tier) `GEMINI_API_KEY` became available on 2026-09-10 and all 4 test-set
+scenarios were run against the real `gemini-2.5-flash` model (see `docs/test-report.md` for
+per-scenario detail and `docs/measurements.md` for timing). Real token usage per comparison
+(2 `structureOffer()` calls each, original + revised):
+
+| Scenario | input tokens (orig+rev) | output tokens (orig+rev) | calculated cost* |
+|---|---|---|---|
+| normal | 297+276=573 | 814+690=1504 | $0.003932 |
+| ambiguity-reorder-badtotal | 297+298=595 | 814+816=1630 | $0.004254 |
+| decline-currency-mismatch | 297+297=594 | 814+814=1628 | $0.004248 |
+| formatting-only | 297+307=604 | 814+834=1648 | $0.004301 |
+
+\* `calculated cost = (input_tokens/1e6 × $0.30) + (output_tokens/1e6 × $2.50)`, using the
+**unverified** third-party price from §3.1 — real token counts, assumed price. Average across
+these 4 real comparisons: **$0.004184 per document pair**. This will change once the exact
+price is confirmed from `ai.google.dev`'s own pricing page; the token counts themselves are
+real and will not change.
+
 ```
-Measurement period: not started — no GEMINI_API_KEY or ANTHROPIC_API_KEY configured yet
-Number of runs: 0 real AI calls (10 deterministic-only runs recorded, see docs/measurements.md)
-Input: test-set/input/normal/{original,revised}.pdf
-Usage: Not measured yet (mock provider reports inputTokens=0, outputTokens=0 by construction —
-       this is not a real usage number, just the mock's fixed return value)
-Provider price: see 3.1 above (unverified pending primary-source confirmation)
-Formula: see 3.1 above
-Calculated cost: Not measured yet
+Measurement period: 2026-09-10, single session, 2 process runs (rate-limit-separated)
+Number of runs: 4 real comparisons (8 structureOffer() calls total)
+Input: all 4 test-set scenarios (test-set/input/*/{original,revised}.pdf)
+Usage: 573-604 input tokens and 1504-1648 output tokens per comparison (see table above);
+       real values from response.usageMetadata, not estimated from text length
+Provider price: $0.30 / $2.50 per million tokens (input/output) — UNVERIFIED, third-party,
+                see §3.1 for why the primary source couldn't be checked directly
+Formula: (input_tokens/1,000,000 × input_price) + (output_tokens/1,000,000 × output_price)
+Calculated cost: $0.0039-$0.0043 per document pair (avg $0.004184), using the unverified price
 Hosting cost: $0 (not deployed — see 3.2)
-Other costs: none observed
-Limitations: the entire AI-step cost is unmeasured. Re-run scripts/measure.ts after setting
-             GEMINI_API_KEY (or ANTHROPIC_API_KEY) in .env; selectStructuringProvider() will
-             automatically switch to the real provider and report real input/output token
-             counts per call, which combined with a confirmed price (3.1) gives a real
-             calculated cost.
+Other costs: none observed (0 retries; 1 rate-limit failure on first attempt at the 4th
+             scenario, which cost 0 tokens since the request was rejected before generation)
+Limitations: unverified per-token price (token counts are real); n=4 not a large sample;
+             free-tier-only measurement — paid-tier latency/behavior not measured; the
+             decline-currency-mismatch scenario still pays full structuring cost even though
+             its result doesn't need the line items beyond the currency field.
 ```

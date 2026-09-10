@@ -4,14 +4,22 @@ Reproduction:
 ```bash
 npx tsx scripts/generateFixtures.ts   # regenerates test-set/input/* (deterministic)
 npx tsx scripts/runTestSet.ts         # runs the pipeline on all 4 scenarios, prints actual results
+npx tsx scripts/runOneScenario.ts normal   # runs a single scenario (useful under free-tier rate limits)
 ```
 
 Expected results for every scenario were written to `test-set/input/<scenario>/expected.md`
 at fixture-generation time, before the pipeline was ever run against them (see git history:
 `generateFixtures.ts` writes both the PDFs and `expected.md` in the same pass).
 
-All 4 runs below used `MockRegexStructuringProvider` (no funded Anthropic API key yet — see
-`docs/cost.md` for the AI-step limitation this implies).
+**Update:** all 4 scenarios below were re-run with the real `GeminiStructuringProvider`
+(model `gemini-2.5-flash`, Google AI Studio free tier) once a key became available. Real
+per-run token usage and timing are recorded per scenario. The free tier's rate limit (5
+requests/minute per model, confirmed directly from the API's own 429 error — see
+`docs/cost.md`) meant the 4 comparisons (8 API calls) had to be split across two process
+runs a few seconds apart rather than one batch. Results below are the real-AI results;
+they are identical to the earlier mock-provider results in every field checked, which is
+itself evidence that Gemini extracted the fixtures correctly (see "AI output check" note
+at the end of this file).
 
 ## 1. normal — mandatory category: normal input
 
@@ -37,6 +45,10 @@ arithmeticDiscrepancies: 0
 ```
 
 **Result: PASS** — all 4 expected changes detected, nothing extra, no false positives.
+
+**Real Gemini call (2026-09-10):** original tokens in=297/out=814, revised tokens
+in=276/out=690. Timing: extraction 1501.1ms (cold pdfjs init in this process),
+structuring 7209.2ms, total 8711.3ms.
 
 ## 2. ambiguity-reorder-badtotal — mandatory category: correction/ambiguity
 
@@ -64,6 +76,9 @@ to it, arithmetic discrepancy detected with the exact expected magnitude (27.5).
 identity itself is surfaced as an uncertain match (similarity 0.75) rather than a silent
 assumption or a false "removed+added" pair.
 
+**Real Gemini call (2026-09-10):** original tokens in=297/out=814, revised tokens
+in=298/out=816. Timing: extraction 2096.0ms, structuring 9415.5ms, total 11512.6ms.
+
 ## 3. decline-currency-mismatch — mandatory category: clarification/decline
 
 **Input:** `test-set/input/decline-currency-mismatch/{original,revised}.pdf` — identical
@@ -80,6 +95,13 @@ currency).)
 ```
 
 **Result: PASS.**
+
+**Real Gemini call (2026-09-10):** original tokens in=297/out=814, revised tokens
+in=297/out=814. Timing: extraction 19.8ms (warm process), structuring 4992.8ms, total
+5012.7ms. Note: the decline check runs before any AI-extracted currency comparison would
+normally be needed for the numeric diff, but the structuring calls still ran (both
+documents are still structured before the currency check in `computeDiff`), so real tokens
+were consumed even though the result was a decline.
 
 ## 4. formatting-only — required by the brief (no substantive changes)
 
@@ -98,6 +120,12 @@ arithmeticDiscrepancies: 0
 
 **Result: PASS.**
 
+**Real Gemini call (2026-09-10):** original tokens in=297/out=814, revised tokens
+in=307/out=834. Timing: extraction 13.9ms (warm process), structuring 8228.9ms, total
+8243.2ms. Confirms the AI step itself already normalizes case/date-format/thousands-separator
+formatting into the same structured values as the plain-text original — the 0-substantive-
+changes result is not solely an artifact of the mock parser.
+
 ## Summary
 
 | Scenario | Category | Result |
@@ -107,7 +135,30 @@ arithmeticDiscrepancies: 0
 | decline-currency-mismatch | clarification/decline | PASS |
 | formatting-only | required by brief | PASS |
 
-4/4 pass. Missed changes: none observed. False changes: none observed, on this fixture set.
-This is not a claim of general robustness — see `docs/final-report.md` (Known limitations) for
-what this test set does and does not cover (e.g. it does not include OCR/scanned input, which
-is explicitly out of scope per the brief).
+4/4 pass with the real Gemini API. Missed changes: none observed. False changes: none
+observed, on this fixture set. This is not a claim of general robustness — see
+`docs/final-report.md` (Known limitations) for what this test set does and does not cover
+(e.g. it does not include OCR/scanned input, which is explicitly out of scope per the brief).
+
+## AI output check (required by the brief: "one example of how you checked their output")
+
+The brief asks for a concrete example of how AI output was verified, not just trusted. Method
+used here: every fixture's `ground-truth.json` (written by `generateFixtures.ts` before any
+PDF existed) records the exact values used to render the PDF. After the real Gemini call, its
+structured extraction was compared field-by-field against that ground truth for the `normal`
+scenario:
+
+| Field | Ground truth | Gemini extracted |
+|---|---|---|
+| original item 1 description | "Steel Bracket Type A" | "Steel Bracket Type A" — match |
+| original item 1 quantity | 100 | 100 — match |
+| revised item 1 quantity | 120 | 120 — match |
+| revised item 2 unitPrice | 24.5 | 24.5 — match |
+| original printedGrandTotal | 2695.0 | 2695 — match |
+| revised deliveryDate (as printed) | "2025-01-10" | "2025-01-10" — match |
+| item count after removal (revised) | 5 | 5 — match |
+
+No discrepancy found between Gemini's extraction and the known-correct ground truth on this
+scenario. This does not prove general reliability (see Known limitations) — it proves the
+specific claim "the AI step's output was checked against a known-correct source, not assumed
+correct," which is what the brief asks for.
