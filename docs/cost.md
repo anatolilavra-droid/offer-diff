@@ -23,21 +23,30 @@ documented since either may end up being the one actually used for measurement.
   **Action needed:** confirm the exact current price at `ai.google.dev/gemini-api/docs/pricing`
   once a key exists.
 - **Free tier (documented, per CLAUDE.md's "free credits are not zero operating cost" rule):**
-  no card required. **Two separate rate limits — both confirmed from the primary source
-  (the API's own error responses), not third-party estimates:**
-  - **Per-minute:** `429 RESOURCE_EXHAUSTED`, `quotaId:
-    "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"`, `quotaValue: "5"` — hit after 6
-    real requests in quick succession on 2026-09-10.
-  - **Per-day:** `429 RESOURCE_EXHAUSTED`, `quotaId:
-    "GenerateRequestsPerDayPerProjectPerModel-FreeTier"`, `quotaValue: "20"` — hit later the
-    same day after ~20+ cumulative real requests across testing, screenshot capture, and
-    retry attempts (see `docs/screenshots/05-real-daily-quota-exhausted.png` for the actual
-    error as it appeared in the running app). **This means a fresh free-tier key supports
-    roughly 10 real comparisons per day** for `gemini-2.5-flash` (2 calls/comparison), not
-    an unlimited amount — a material constraint for anyone reproducing this project's
-    measurements on the same day.
-  Both figures are lower than the ~15/minute third-party estimate quoted before a key was
-  available, confirming those blogs' own caveat that limits vary by account/project.
+  no card required. **Rate limits confirmed twice over from the primary source — first from
+  the API's own error responses while testing, then again by the user directly reading the
+  Google AI Studio dashboard** (`aistudio.google.com/usage` and `.../rate-limit`;
+  screenshots: `docs/screenshots/06-google-ai-studio-usage-dashboard.jpg` and
+  `07-google-ai-studio-rate-limits-dashboard.jpg`, reviewed 2026-09-10). The dashboard's own
+  "Rate Limits by model" table shows, for the free tier:
+  | Model | RPM (used/limit) | RPD (used/limit) |
+  |---|---|---|
+  | Gemini 2.5 Flash | 7/5 | —/20 |
+  | Gemini 2.5 Flash TTS | 4/3 | —/10 |
+  This matches exactly what this project's own API errors reported independently: `429
+  RESOURCE_EXHAUSTED` with `quotaId: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"`,
+  `quotaValue: "5"` for `gemini-2.5-flash` (hit after 6 rapid requests), `quotaId:
+  "GenerateRequestsPerDayPerProjectPerModel-FreeTier"`, `quotaValue: "20"` for the same model
+  (hit later the same day — see `docs/screenshots/05-real-daily-quota-exhausted.png`), and
+  `quotaValue: "3"` RPM for `gemini-2.5-flash-tts` (hit while generating the video narration).
+  The dashboard additionally reveals the TTS model's **daily** cap, **10 requests/day**,
+  which the API error text alone never surfaced (this project's 7 narration calls stayed
+  under it). **Practical consequence: a fresh free-tier key supports roughly 10 real
+  comparisons/day** for `gemini-2.5-flash` (2 calls/comparison) — a material constraint for
+  reproducing this project's measurements same-day. The dashboard also showed a **"payment
+  limit reached"** notice (`Ви досягли ліміту платежів`) — the account's own $0 default
+  spending cap, confirming no real money can be charged without the user explicitly raising
+  a billing limit.
   **Non-monetary cost:** third-party sources (unverified) report that free-tier prompts may
   be used by Google to improve their products (unlike the paid tier / Vertex AI) — for this
   project the submitted content is fictional test-fixture text, so that specific tradeoff is

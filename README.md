@@ -24,6 +24,7 @@ came from the real Gemini API (`gemini-2.5-flash`).
 | **Currency mismatch → decline** (mock parser — real key hit its daily quota while capturing this one; the decline logic itself was already verified with real Gemini output earlier, see `docs/test-report.md`) | ![decline](docs/screenshots/03-decline-currency-mismatch-mock.png) |
 | **Formatting-only → 0 changes** (real Gemini) | ![formatting-only](docs/screenshots/04-formatting-only.png) |
 | **A real failure encountered live**: Google AI Studio's free-tier daily quota (20 requests/day/model) exhausted mid-session — the raw upstream error is surfaced to the user rather than hidden or crashing | ![quota exhausted](docs/screenshots/05-real-daily-quota-exhausted.png) |
+| **Primary-source confirmation**: the Google AI Studio usage dashboard itself, independently confirming the exact rate limits this project's own API errors reported (5 RPM / 20 RPD for `gemini-2.5-flash`, 3 RPM / 10 RPD for the TTS model) | ![usage dashboard](docs/screenshots/06-google-ai-studio-usage-dashboard.jpg) ![rate limits dashboard](docs/screenshots/07-google-ai-studio-rate-limits-dashboard.jpg) |
 
 ## Flow diagram
 
