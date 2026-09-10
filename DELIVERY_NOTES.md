@@ -9,10 +9,11 @@ cost per operation... Name the pricing assumptions and separate hosting costs."
 
 - **Repository:** https://github.com/anatolilavra-droid/offer-diff (private access; add
   collaborators as needed)
-- **Working demo:** local only — `npm install && cp .env.example .env && npm run dev`, then
-  open `http://localhost:3000`. No public URL is deployed; see `README.md` → "Demo" and
-  `docs/cost.md` §3.2 for why (the brief explicitly allows this: "no accounts, payments...
-  required"). Say which hosting platform you'd like if a public URL is specifically needed.
+- **Working demo:** public URL pending deployment — `render.yaml` is committed and README →
+  "Demo" has exact, tested steps for a free (no card) Render deploy. Until deployed, run
+  locally: `npm install && cp .env.example .env && npm run dev`, then open
+  `http://localhost:3000` — which the brief's "no accounts, payments... required" explicitly
+  allows.
 - **Video walkthrough:** `docs/demo-video.mp4` (1m31s, narrated) — real browser session
   across all 4 test-set scenarios, with spoken narration synthesized via the **Gemini API's
   own TTS model** (`gemini-2.5-flash-preview-tts`, voice "Kore", same `GEMINI_API_KEY`) —

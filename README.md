@@ -77,14 +77,34 @@ npm run dev
 
 ## Demo
 
-This submission's working demo is **local**: `npm run dev` + a browser at
-`http://localhost:3000`, per the brief's explicit allowance that "no accounts, payments...
-required" — no public hosting has been provisioned or billed (see `docs/cost.md` §3.2 for
-why: naming a hosting provider/price without actually using it would be an unverified
-promise). If a publicly reachable URL is specifically required for evaluation, the app is a
-single stateless Node/Express process with no database, so it is straightforward to deploy
-to any standard Node host (Render, Fly.io, Railway, etc.) — say which platform and it can be
-set up.
+**Public URL:** _pending — deploy following the steps below, then this line gets replaced
+with the live link._ Until then, the working demo is **local**: `npm run dev` + a browser at
+`http://localhost:3000`, which the brief's "no accounts, payments... required" explicitly
+allows.
+
+### Deploying a public URL (Render, no credit card required)
+
+This app is a single stateless Node/Express process with no database, so it deploys as-is.
+[Render](https://render.com)'s free tier needs no card and includes a `render.yaml` in this
+repo already configured for it.
+
+1. Go to https://dashboard.render.com/register and sign up (GitHub login is easiest — no
+   card requested for the free tier).
+2. **New +** → **Blueprint** → connect this GitHub repository. Render reads `render.yaml`
+   and pre-fills the service (build: `npm install && npm run build`, start: `npm start`).
+3. It will prompt for the one secret marked `sync: false` in `render.yaml`: paste your
+   `GEMINI_API_KEY` there (get one free, no card, at https://aistudio.google.com/apikey if
+   you don't have one already).
+4. **Apply** / **Create Web Service**. First deploy takes a few minutes; Render gives you a
+   URL like `https://offer-diff-xxxx.onrender.com`.
+5. The free plan sleeps after inactivity — the first request after a while takes ~30-60s to
+   wake up (cold start), then responds normally. This is a Render free-tier characteristic,
+   not a bug in the app.
+
+**Note on shared quota:** the free Gemini key has a hard cap of **20 structuring
+requests/day** (see `docs/cost.md`) — that's roughly 10 comparisons/day, shared across
+anyone using the deployed link that day. If it's exhausted, the app falls back to the
+regex mock automatically and says so in the UI, rather than erroring out silently.
 
 ## Running without an API key
 
