@@ -102,9 +102,16 @@ repo already configured for it.
    not a bug in the app.
 
 **Note on shared quota:** the free Gemini key has a hard cap of **20 structuring
-requests/day** (see `docs/cost.md`) — that's roughly 10 comparisons/day, shared across
-anyone using the deployed link that day. If it's exhausted, the app falls back to the
-regex mock automatically and says so in the UI, rather than erroring out silently.
+requests/day** (see `docs/cost.md`) — roughly 10 comparisons/day, shared across anyone
+using the deployed link that day. The app does **not** automatically switch to the mock
+parser mid-day if that runs out (the provider is chosen once at process startup, not
+per-request) — instead, `src/rateLimit.ts` enforces its own conservative budget (6
+comparisons/day, per process) so real requests get a clear "daily quota used up" message
+before ever reaching Google's own limit. Caveat: that budget is in-memory and resets on a
+process restart, which Render's free tier does after periods of inactivity — so it is a
+strong deterrent, not an absolute guarantee, against the real quota being hit. If the real
+Gemini quota is exhausted anyway, the request fails with the upstream error surfaced
+directly (not hidden), per `docs/final-report.md`'s pre-deployment review.
 
 ## Running without an API key
 
@@ -156,7 +163,10 @@ src/
   ai/selectProvider.ts       picks Gemini, else Claude, else mock, based on env vars
   matching/matchItems.ts     order-independent, rename-tolerant line-item matching
   diff/computeDiff.ts        deterministic diff + arithmetic recalculation
-  pipeline.ts                orchestrates the above, with timing
+  scopeLimits.ts             shared MAX_PAGES/MAX_ITEMS constants
+  rateLimit.ts               per-IP + daily-budget limiter protecting the free-tier AI quota
+  pipeline.ts                orchestrates the above; declines over-page-limit PDFs before
+                              calling the AI, with timing
   server.ts                  Express app + POST /api/compare
 public/                      browser UI (plain HTML/CSS/JS, no framework)
 scripts/                     fixture generation, test-set runner, measurement, browser check

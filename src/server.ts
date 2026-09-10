@@ -4,9 +4,14 @@ import multer from "multer";
 import path from "node:path";
 import { compareOffers } from "./pipeline";
 import { selectStructuringProvider } from "./ai/selectProvider";
+import { checkAndRecordIp, checkAndRecordDailyBudget } from "./rateLimit";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
+
+// Render (and most PaaS) sit behind a reverse proxy; without this, req.ip is the
+// proxy's address and per-IP rate limiting would treat every visitor as one client.
+app.set("trust proxy", 1);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -15,12 +20,7 @@ const upload = multer({
 
 const { provider, isMock } = selectStructuringProvider();
 
-// Scope limits stated in the brief: up to 3 pages, up to 10 line items per document.
-const MAX_PAGES = 3;
-const MAX_ITEMS = 10;
-
 app.use(express.static(path.join(__dirname, "..", "public")));
-app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, mockProvider: isMock });
@@ -28,10 +28,42 @@ app.get("/api/health", (_req, res) => {
 
 app.post(
   "/api/compare",
-  upload.fields([
-    { name: "original", maxCount: 1 },
-    { name: "revised", maxCount: 1 },
-  ]),
+  // Rate-limit before spending any CPU/bandwidth on parsing the (up to 20MB of)
+  // multipart body -- reject early, not after the expensive part is already done.
+  // Only real AI calls are gated: the mock fallback doesn't touch any quota, so
+  // limiting it too would just make the no-key demo experience worse for no reason.
+  (req, res, next) => {
+    if (isMock) return next();
+
+    const ipCheck = checkAndRecordIp(req.ip ?? "unknown");
+    if (!ipCheck.allowed) {
+      return res.status(429).json({
+        error: `Too many requests from this address. Please wait about ${Math.ceil((ipCheck.retryAfterMs ?? 0) / 1000)}s and try again.`,
+      });
+    }
+    const budgetCheck = checkAndRecordDailyBudget();
+    if (!budgetCheck.allowed) {
+      return res.status(429).json({
+        error:
+          "This demo's daily AI quota (a deliberately conservative slice of the free tier's " +
+          "hard limit -- see docs/cost.md) has been used up for today. Please try again after " +
+          "00:00 UTC, or run the project locally with your own API key.",
+      });
+    }
+    next();
+  },
+  (req, res, next) => {
+    upload.fields([
+      { name: "original", maxCount: 1 },
+      { name: "revised", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: `Upload error: ${err.message}` });
+      }
+      if (err) return next(err);
+      next();
+    });
+  },
   async (req, res) => {
     const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
     const originalFile = files?.original?.[0];
@@ -53,31 +85,25 @@ app.post(
         { fileName: revisedFile.originalname, data: revisedFile.buffer }
       );
 
-      const scopeErrors: string[] = [];
-      for (const [label, offer] of [
-        ["original", result.original],
-        ["revised", result.revised],
-      ] as const) {
-        if (offer.items.length > MAX_ITEMS) {
-          scopeErrors.push(
-            `${label} document has ${offer.items.length} line items, which is above the supported limit of ${MAX_ITEMS}.`
-          );
-        }
-      }
-      if (result.pageCount.original > MAX_PAGES) {
-        scopeErrors.push(`original document has ${result.pageCount.original} pages, above the supported limit of ${MAX_PAGES}.`);
-      }
-      if (result.pageCount.revised > MAX_PAGES) {
-        scopeErrors.push(`revised document has ${result.pageCount.revised} pages, above the supported limit of ${MAX_PAGES}.`);
-      }
-
-      res.json({ ...result, isMockProvider: isMock, scopeWarnings: scopeErrors });
+      res.json({ ...result, isMockProvider: isMock });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
     }
   }
 );
+
+// Catch-all error handler: without this, an error passed via next(err) anywhere above
+// would fall through to Express's default handler, which can render an HTML page
+// (and, outside production, a stack trace) instead of the JSON this app's UI expects.
+app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: err instanceof Error ? err.message : "Unknown error" });
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection:", reason);
+});
 
 app.listen(port, () => {
   console.log(`offer-diff listening on http://localhost:${port}`);

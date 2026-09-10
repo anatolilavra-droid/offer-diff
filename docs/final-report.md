@@ -101,6 +101,36 @@ output check" for the full comparison table.
   reviewer is never misled about what actually ran (and no such banner appears when the
   real Gemini API is configured and used).
 
+## Pre-deployment production review
+
+Before deploying a public URL, the codebase was audited for what would actually break or
+misbehave under real, unsupervised traffic -- each finding below was reproduced with a real
+command before being called a bug, and re-verified after the fix, not just reasoned about.
+
+| # | Finding | Evidence | Fix |
+|---|---|---|---|
+| 1 | **Build was broken for a clean deploy.** `package.json`'s `start` script pointed at `dist/server.js`, but `tsc` (with `rootDir: "."`) compiled the whole tree, actually producing `dist/src/server.js`; `public/`'s relative path would also have resolved one directory too shallow. | Ran `npm run build` and `find dist -name server.js` -- found it at the wrong path. | Added `tsconfig.build.json` (`rootDir: "src"`) used only by `npm run build`; verified `npm run build && node dist/server.js` serves `/api/health` and static files correctly. |
+| 2 | **The build would fail on Render specifically.** Most PaaS (Render included) set `NODE_ENV=production`, under which `npm install` skips devDependencies -- including `typescript`, needed to run `tsc` during the build step. | Reproduced locally: `NODE_ENV=production npm install` then `npm run build` failed with `tsc` unavailable. | `render.yaml`'s build command explicitly uses `npm install --include=dev`; re-verified the same reproduction now succeeds. |
+| 3 | **An oversized PDF could burn the entire daily AI quota in one request.** The page-count scope check ran *after* both documents were already sent to the (quota-limited) AI provider, not before. | Generated a 215-page PDF, ran it through `compareOffers` with the real (quota-exhausted) key -- it used to attempt real API calls regardless of scope. | Moved the page-limit check into `pipeline.ts`, right after text extraction and before any AI call. Verified via a real HTTP request and an automated test (`tests/pipelineScopeLimit.test.ts`) that `structureOffer` is called 0 times for an over-limit PDF. |
+| 4 | **No protection against a public URL exhausting the free-tier quota for everyone.** The free tier allows only ~10 comparisons/day total; a single visitor (or a bot) could exhaust it in seconds with no rate limiting at all. | N/A (design gap, not a crash) -- confirmed by reading the code, not by causing an outage. | Added `src/rateLimit.ts`: a per-IP limiter (3 requests/10 min) and a conservative daily budget (6 comparisons/day, under the real ~10/day cap) for the AI path only (mock traffic is exempt). Verified live: the 4th rapid request from one IP got a clean `429` with a wait-time hint (unit-tested in `tests/rateLimit.test.ts`, and confirmed end-to-end against the running server). |
+| 5 | **An oversized upload could crash with an unhandled error / leak an HTML error page.** Multer's file-size limit (10MB) threw an error with no error-handling middleware wired to catch it. | Uploaded a 12MB file to a running server -- confirmed (via `curl -v`) the fix now returns a clean `400 {"error":"Upload error: File too large"}` instead. | Added explicit Multer error handling plus a catch-all Express error middleware that always responds with JSON, never Express's default HTML/stack-trace page. |
+| 6 | **Two dependencies used caret version ranges** (`@google/genai`, `playwright`), inconsistent with every other pinned dependency and this project's own reproducibility requirement. | Read `package.json` directly. | Pinned both to the exact versions already resolved in `package-lock.json`; re-ran `npm install` and `npm audit` (0 vulnerabilities, no change). |
+| 7 | **Redundant/confusing decline messaging in the UI** for the new page-limit case (a duplicate "Out of scope" banner repeating the decline banner's own text, with a doubled "Cannot process: Cannot process:"-style prefix). | Ran the new page-limit case through a real headless browser, read the rendered text. | Reordered `public/app.js` so scope warnings aren't shown separately when already declined, and removed the redundant prefix in the decline reason text. Re-verified in the browser: single, clean message, no JS errors. |
+
+Not fixed, deliberately, with reasoning: the line-item-count scope check still runs *after*
+the AI call, because item count is only knowable from the AI's own extraction -- there is no
+way to check it earlier without calling the AI first. The daily rate-limit budget is
+consumed even by malformed requests (missing files, wrong mimetype) since the limiter runs
+before file validation, in exchange for rejecting abuse before spending CPU/bandwidth parsing
+the request body; given the per-IP cap of 3 requests/10min, the worst case is a small,
+bounded amount of wasted budget, judged an acceptable tradeoff for a low-traffic demo rather
+than something worth a more complex two-phase check. The daily budget counter is also
+in-memory and per-process: it resets on a restart, which Render's free tier performs after
+inactivity, so it is a strong deterrent rather than an absolute guarantee against the real
+Gemini quota being hit by cumulative traffic across restarts -- a persistent counter (e.g. a
+small external key-value store) would close this gap, but was judged unnecessary complexity
+for a low-traffic technical-assignment demo.
+
 ## Measured performance
 
 See **`docs/measurements.md`** for the full raw data. Two parts:

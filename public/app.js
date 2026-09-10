@@ -36,20 +36,22 @@ function renderResults(data) {
     );
   }
 
+  const diff = data.diff;
+
+  if (diff.decline) {
+    // declineReason already explains any scope violation that caused this -- showing
+    // scopeWarnings too would just repeat the same sentence in a second banner.
+    parts.push(`<div class="decline-banner">Cannot conclude: ${escapeHtml(diff.declineReason)}</div>`);
+    resultsEl.innerHTML = parts.join("\n");
+    return;
+  }
+
   if (data.scopeWarnings && data.scopeWarnings.length) {
     parts.push(
       `<div class="mock-banner"><strong>Out of scope:</strong><ul>${data.scopeWarnings
         .map((w) => `<li>${escapeHtml(w)}</li>`)
         .join("")}</ul></div>`
     );
-  }
-
-  const diff = data.diff;
-
-  if (diff.decline) {
-    parts.push(`<div class="decline-banner">Cannot conclude: ${escapeHtml(diff.declineReason)}</div>`);
-    resultsEl.innerHTML = parts.join("\n");
-    return;
   }
 
   if (diff.hasNoSubstantiveChanges) {
