@@ -4,9 +4,9 @@ Compares an original and a revised commercial offer (PDF) and reports substantiv
 scope, quantities, unit prices, totals, and delivery dates — each with a reference back to
 both source documents. Built for a supplied technical test assignment (see `TASK.md`).
 
-**Links:** Repository — https://github.com/anatolilavra-droid/offer-diff · Live demo — see
-"Demo" below (runs locally; no public URL deployed, see rationale) · Video walkthrough —
-`docs/demo-video.mp4` (see "Video walkthrough" below) · Delivery notes — **`DELIVERY_NOTES.md`**.
+**Links:** Repository — https://github.com/anatolilavra-droid/offer-diff · **Live demo — https://offer-diff.onrender.com**
+(free tier: spins down after inactivity, first request can take 50s+ to wake up — see "Demo" below)
+· Video walkthrough — `docs/demo-video.mp4` (see "Video walkthrough" below) · Delivery notes — **`DELIVERY_NOTES.md`**.
 
 Full evaluation report (evidence, measurements, cost, tradeoffs, limitations): **`docs/final-report.md`**.
 
@@ -77,12 +77,18 @@ npm run dev
 
 ## Demo
 
-**Public URL:** _pending — deploy following the steps below, then this line gets replaced
-with the live link._ Until then, the working demo is **local**: `npm run dev` + a browser at
-`http://localhost:3000`, which the brief's "no accounts, payments... required" explicitly
-allows.
+**Public URL: https://offer-diff.onrender.com** — deployed 2026-09-10 on Render's free tier
+(no card required; see cost/hosting detail in `docs/cost.md` §3.2). The free plan spins down
+after inactivity, so the **first request can take 50+ seconds** to wake the instance up —
+that's Render's own free-tier behavior, not a bug. Sample test PDFs to try it with are in
+`test-set/input/*/{original,revised}.pdf` (download from the repo, then upload both to the
+demo — `normal` is the most illustrative first try).
 
-### Deploying a public URL (Render, no credit card required)
+Local alternative (no cold start, and works if the deployed instance's daily AI quota is
+used up for the day): `npm run dev` + a browser at `http://localhost:3000`, which the
+brief's "no accounts, payments... required" also explicitly allows.
+
+### How the public URL was deployed (Render, no credit card required)
 
 This app is a single stateless Node/Express process with no database, so it deploys as-is.
 [Render](https://render.com)'s free tier needs no card and includes a `render.yaml` in this

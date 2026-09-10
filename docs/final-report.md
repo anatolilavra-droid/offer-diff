@@ -168,8 +168,11 @@ by contrast, **is** confirmed directly from the API's own error response, not a 
 
 ## Hosting costs (separate)
 
-See `docs/cost.md` §3.2. Summary: **not deployed, $0 so far** — demoed locally
-(`npm run dev`), which the brief's "no accounts, payments... required" explicitly allows.
+See `docs/cost.md` §3.2. Summary: **deployed at https://offer-diff.onrender.com on Render's
+free Web Service tier, $0 hosting cost.** Real free-tier characteristics documented rather
+than glossed over: 50+ second cold start after inactivity, 750 instance-hours/month cap. A
+local run (`npm run dev`) remains available too, per the brief's "no accounts, payments...
+required" allowance.
 
 ## Reproduction instructions
 
@@ -263,10 +266,9 @@ reports 0 vulnerabilities as of this submission.
    because the demo's actual usage stayed within the free tier's limits.
 3. **Broaden date-format parsing** — cover more real-world formats (DD/MM/YYYY, "15 Dec
    2024", etc.) — medium value, low effort, not done now because the test set didn't need it.
-4. **Deploy for a public demo URL**, once real hosting is actually chosen and billed (see
-   `docs/cost.md` §3.2) — needed only if a locally-run demo is insufficient for the
-   evaluator; not done now because the brief allows a local demo and provisioning hosting
-   without using it would be an unmeasured, unjustified cost.
+4. ~~Deploy for a public demo URL~~ — **done**: https://offer-diff.onrender.com (Render free
+   tier, see `docs/cost.md` §3.2). Remaining follow-up if this demo sees real sustained use:
+   upgrade off the free tier to remove the cold-start delay and the 750-hour/month cap.
 5. **Larger-scale AI accuracy/latency sample** — 4 real calls is enough to demonstrate
    correctness on this test set, but a real accuracy rate needs more than 4 documents;
    requires either a paid tier or a longer measurement window to respect the free-tier rate
@@ -293,7 +295,7 @@ reports 0 vulnerabilities as of this submission.
 | Estimated cost per document pair | Partially verified (real token usage measured, avg $0.004184/pair; per-token price itself unverified from primary source) |
 | Pricing assumptions named, hosting separate | Verified (formula + real usage in docs/cost.md; exact per-token price flagged unverified, rate limit confirmed from the API itself) |
 | Free credits != zero cost, documented | Verified — and now applicable: Gemini free-tier rate limit (5 req/min/model) and data-use terms documented in docs/cost.md §3.1 |
-| Working browser demo | Verified (local; see README) |
+| Working browser demo | Verified — public URL https://offer-diff.onrender.com (Render free tier), plus local (README) |
 | Repository with setup instructions | Verified |
 | Video walkthrough (<=3 min) | Verified — `docs/demo-video.mp4`, 1m31s (under the 3-minute cap), narrated via real Gemini TTS explaining all 4 scenarios as they play; not the candidate's own recorded voice, but a real spoken explanation, not silent |
 | Reused vs. own components identified | Verified (README, DELIVERY_NOTES.md) |

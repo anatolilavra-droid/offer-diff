@@ -83,15 +83,19 @@ documented since either may end up being the one actually used for measurement.
 
 ## 3.2 Hosting costs (separate from the above)
 
-- **Current status: not deployed.** The demo runs locally (`npm run dev` + a browser
-  pointed at `http://localhost:3000`), per the brief's allowance that no accounts, payments,
-  or app-store release are required. **Hosting cost incurred so far: $0.**
-- If a publicly reachable URL is later needed (e.g. for the video walkthrough), this is a
-  single small Node.js/Express process with no database — it would fit a minimal free or
-  low-cost tier on a generic Node hosting provider. No specific provider or price is named
-  here because none has actually been provisioned or billed; naming one now would be an
-  unverified promise, which the brief explicitly asks to avoid. This is listed as a next
-  step in `docs/final-report.md`, not as a cost figure.
+- **Current status: deployed.** Public URL: **https://offer-diff.onrender.com**, deployed
+  2026-09-10 on **Render**'s free Web Service tier (no card required to sign up or deploy;
+  confirmed by actually deploying, not a third-party claim). **Hosting cost incurred: $0**
+  (free tier, no billing enabled on the Render account).
+- **Free-tier characteristics that are a real (non-monetary) cost, not "free" outright:**
+  - The instance spins down after a period of inactivity; the next request pays a cold-start
+    penalty of **50+ seconds** (per Render's own in-dashboard notice, screenshotted during
+    setup) before responding normally.
+  - Render's free Web Service plan provides 750 instance-hours/month and 512MB RAM — not
+    unlimited; a sustained high-traffic demo would need a paid plan.
+- Config: `render.yaml` (committed to the repo) defines the build (`npm install --include=dev
+  && npm run build`) and start (`npm start`) commands; `GEMINI_API_KEY` is set as a Render
+  environment secret (not committed, not visible in the repo).
 
 ## 3.3 Free credits are not zero operating cost
 

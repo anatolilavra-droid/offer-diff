@@ -9,11 +9,12 @@ cost per operation... Name the pricing assumptions and separate hosting costs."
 
 - **Repository:** https://github.com/anatolilavra-droid/offer-diff (private access; add
   collaborators as needed)
-- **Working demo:** public URL pending deployment — `render.yaml` is committed and README →
-  "Demo" has exact, tested steps for a free (no card) Render deploy. Until deployed, run
-  locally: `npm install && cp .env.example .env && npm run dev`, then open
-  `http://localhost:3000` — which the brief's "no accounts, payments... required" explicitly
-  allows.
+- **Working demo: https://offer-diff.onrender.com** — deployed 2026-09-10 on Render's free
+  tier (no card required). Sample PDFs to test with: `test-set/input/*/{original,revised}.pdf`
+  in the repo (download and upload both to try a scenario; `normal` is the clearest first
+  try). The free plan spins down after inactivity — the first request can take 50+ seconds
+  to wake it up. Local alternative: `npm install && cp .env.example .env && npm run dev`,
+  then open `http://localhost:3000`.
 - **Video walkthrough:** `docs/demo-video.mp4` (1m31s, narrated) — real browser session
   across all 4 test-set scenarios, with spoken narration synthesized via the **Gemini API's
   own TTS model** (`gemini-2.5-flash-preview-tts`, voice "Kore", same `GEMINI_API_KEY`) —
