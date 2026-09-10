@@ -13,9 +13,11 @@ cost per operation... Name the pricing assumptions and separate hosting costs."
   open `http://localhost:3000`. No public URL is deployed; see `README.md` → "Demo" and
   `docs/cost.md` §3.2 for why (the brief explicitly allows this: "no accounts, payments...
   required"). Say which hosting platform you'd like if a public URL is specifically needed.
-- **Video walkthrough:** `docs/demo-video.webm` (19.8s, silent, Playwright-recorded real
-  browser session across all 4 test-set scenarios). This is an automated functional proof
-  the flow works, not a narrated presentation — see caveat in README.
+- **Video walkthrough:** `docs/demo-video.mp4` (1m31s, narrated) — real browser session
+  across all 4 test-set scenarios, with spoken narration synthesized via the **Gemini API's
+  own TTS model** (`gemini-2.5-flash-preview-tts`, voice "Kore", same `GEMINI_API_KEY`) —
+  not a human voiceover. See README → "Video walkthrough" for exactly how it was built and
+  reproduced.
 - **This document:** `DELIVERY_NOTES.md`. Full technical report: `docs/final-report.md`.
 
 ## Sample inputs, expected/actual results
@@ -51,6 +53,10 @@ were handled (not hidden — see `docs/cost.md` and `docs/final-report.md` for f
    because this was actually observed, not speculatively.
 3. **Two 429/503 failures were retried successfully** and ultimately produced correct
    output; none were hidden or omitted from this report.
+4. **The TTS model has its own, separate, tighter rate limit:** `gemini-2.5-flash-preview-tts`
+   returned `429` at **3 requests/minute/model** while generating the video's narration
+   (again confirmed from the API's own error, not estimated) — resolved by waiting for the
+   per-minute window and re-running the (idempotent, resumable) generation script.
 
 ## Time spent
 
@@ -76,6 +82,9 @@ were handled (not hidden — see `docs/cost.md` and `docs/final-report.md` for f
 - **Anthropic Claude (`claude-sonnet-5`, via the Anthropic API)** — implemented as an
   alternative structuring provider behind the same interface (`src/ai/claudeProvider.ts`),
   but not exercised with real API traffic (no funded key) — see Known limitations.
+- **Google Gemini TTS (`gemini-2.5-flash-preview-tts`, voice "Kore")** — generated the real
+  spoken narration for `docs/demo-video.mp4` from a fixed script (`scripts/narration.ts`),
+  using the same `GEMINI_API_KEY`. Not a human recording.
 
 ## One example of how AI output was checked
 
@@ -108,7 +117,12 @@ Full detail, with pricing assumptions and hosting costs kept in **separate secti
   $0.30/$2.50 per million input/output tokens: **avg $0.004184 per document pair**
   (real tokens x assumed price — see `docs/cost.md` for why the exact price itself
   couldn't be confirmed from Google's own site in this environment).
-- **Speech:** not applicable — no audio in this task.
+- **Speech:** not part of the *product's* per-operation cost — the shipped tool does not use
+  speech at runtime. It was used once, separately, to produce `docs/demo-video.mp4`'s
+  narration (7 real `gemini-2.5-flash-preview-tts` calls, ~86s of synthesized audio). Exact
+  per-call token/character usage for those TTS calls was not captured in this delivery (the
+  generation script logs audio byte size and duration, not billing units) — noted here
+  rather than omitted, per "don't hide it, mark what wasn't measured."
 - **Retries:** observed retries consumed 0 additional tokens (rejected before generation);
   they added latency only, not cost, in the cases actually seen.
 - **Paid intermediaries:** none.

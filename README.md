@@ -6,7 +6,7 @@ both source documents. Built for a supplied technical test assignment (see `TASK
 
 **Links:** Repository — https://github.com/anatolilavra-droid/offer-diff · Live demo — see
 "Demo" below (runs locally; no public URL deployed, see rationale) · Video walkthrough —
-`docs/demo-video.webm` (see "Video walkthrough" below) · Delivery notes — **`DELIVERY_NOTES.md`**.
+`docs/demo-video.mp4` (see "Video walkthrough" below) · Delivery notes — **`DELIVERY_NOTES.md`**.
 
 Full evaluation report (evidence, measurements, cost, tradeoffs, limitations): **`docs/final-report.md`**.
 
@@ -145,10 +145,20 @@ docs/                        final report, cost, measurements, test report
 
 ## Video walkthrough
 
-`docs/demo-video.webm` — a short, silent screen recording (Playwright-driven, real browser,
-real Gemini API) showing the actual upload → compare → report flow for two scenarios. This
-is an automated functional walkthrough proving the flow works, not a narrated presentation
-of the author's own reasoning/tradeoffs — see `DELIVERY_NOTES.md` for that.
+`docs/demo-video.mp4` (1m31s, with narration) — walks through all 4 test-set scenarios in a
+real browser: normal changes, the rename+reorder+wrong-total case, the currency-mismatch
+decline, and the formatting-only zero-changes case, explaining each result as it appears.
+
+How it was made, for reproducibility (`scripts/narration.ts`, `scripts/generateNarration.ts`,
+`scripts/recordNarratedVideo.ts`): the narration script is fixed text, synthesized into real
+speech via the **Gemini API's own text-to-speech model** (`gemini-2.5-flash-preview-tts`,
+voice "Kore") using the same `GEMINI_API_KEY` — not a human recording, not a separate TTS
+vendor. A Playwright-driven real browser session was recorded and paced (via measured audio
+segment durations) to match the narration, then muxed together with a full `ffmpeg` build
+(H.264 + AAC). The on-screen results themselves came from the deterministic mock parser
+(the real Gemini structuring quota was exhausted from testing that same day — see Known
+limitations); the mock's output is identical to the real Gemini output already verified in
+`docs/test-report.md`, and the narration says so explicitly near the end.
 
 ## Known limitations
 
