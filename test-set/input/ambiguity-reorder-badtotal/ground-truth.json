@@ -1,0 +1,94 @@
+{
+  "original": {
+    "docTitle": "Commercial Offer",
+    "offerNumber": "OFR-2024-118",
+    "currency": "USD",
+    "offerDate": "2024-11-03",
+    "deliveryDate": "2024-12-15",
+    "items": [
+      {
+        "description": "Steel Bracket Type A",
+        "quantity": 100,
+        "unitPrice": 4.5,
+        "printedLineTotal": 450
+      },
+      {
+        "description": "Aluminum Panel 2mm",
+        "quantity": 40,
+        "unitPrice": 22,
+        "printedLineTotal": 880
+      },
+      {
+        "description": "Hex Bolt M8x40",
+        "quantity": 500,
+        "unitPrice": 0.35,
+        "printedLineTotal": 175
+      },
+      {
+        "description": "Rubber Gasket Ring",
+        "quantity": 200,
+        "unitPrice": 1.2,
+        "printedLineTotal": 240
+      },
+      {
+        "description": "Powder Coating Service",
+        "quantity": 1,
+        "unitPrice": 650,
+        "printedLineTotal": 650
+      },
+      {
+        "description": "Freight & Handling",
+        "quantity": 1,
+        "unitPrice": 300,
+        "printedLineTotal": 300
+      }
+    ],
+    "printedGrandTotal": 2695
+  },
+  "revised": {
+    "docTitle": "Commercial Offer",
+    "offerNumber": "OFR-2024-118",
+    "currency": "USD",
+    "offerDate": "2024-11-03",
+    "deliveryDate": "2024-12-15",
+    "items": [
+      {
+        "description": "Steel Bracket Type A",
+        "quantity": 100,
+        "unitPrice": 4.5,
+        "printedLineTotal": 450
+      },
+      {
+        "description": "Aluminum Panel 2mm",
+        "quantity": 40,
+        "unitPrice": 22,
+        "printedLineTotal": 880
+      },
+      {
+        "description": "M8x40 Hex Head Bolt",
+        "quantity": 450,
+        "unitPrice": 0.35,
+        "printedLineTotal": 157.5
+      },
+      {
+        "description": "Rubber Gasket Ring",
+        "quantity": 200,
+        "unitPrice": 1.2,
+        "printedLineTotal": 240
+      },
+      {
+        "description": "Powder Coating Service",
+        "quantity": 1,
+        "unitPrice": 650,
+        "printedLineTotal": 650
+      },
+      {
+        "description": "Freight & Handling",
+        "quantity": 1,
+        "unitPrice": 300,
+        "printedLineTotal": 300
+      }
+    ],
+    "printedGrandTotal": 2650
+  }
+}

@@ -2,9 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>offer-diff (scaffold)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>offer-diff</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <p>scaffold ok</p>
+  <div class="wrap">
+    <h1>Compare commercial offers</h1>
+    <p class="subtitle">Upload the original and the revised offer (text-based PDF, up to 3 pages, up to 10 line items, one currency).</p>
+
+    <div class="panel">
+      <form id="compare-form">
+        <div class="upload-row">
+          <div class="upload-field">
+            <label for="original">Original</label>
+            <input type="file" id="original" name="original" accept="application/pdf" required />
+          </div>
+          <div class="upload-field">
+            <label for="revised">Revised</label>
+            <input type="file" id="revised" name="revised" accept="application/pdf" required />
+          </div>
+        </div>
+        <button type="submit" id="submit-btn">Compare</button>
+        <div id="status"></div>
+      </form>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
